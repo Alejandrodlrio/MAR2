@@ -7,7 +7,7 @@
 *.slnx
 *.vcxproj
 *.filters
-
+*.DS_Store
 # Archivos objeto / compilación
 *.obj
 *.o
@@ -41,3 +41,4 @@ obj/
 # Logs
 *.log
 
+.DS_Store
