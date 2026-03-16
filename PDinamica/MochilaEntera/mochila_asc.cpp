@@ -66,6 +66,17 @@ int mochila(Matriz<int> &matriz, vector<pack> const& v, int n, int t){
 
 }
 
+// mochila con optimizacion en espacio: O(n) en lugar de O(nxt)
+// int mochila_opt(vector<pack> const& v, int n, int t){
+//     vector<int> matriz(t + 1, 0);
+//     for(int i = 1; i <= n; ++i){
+//         for(int j = t; j >= v[i - 1].p; j--){
+//             matriz[j] = max(matriz[j], matriz[j - v[i - 1].p] + v[i - 1].v);
+//         }
+//     }
+
+//     return matriz[t];
+// }
 
 void resuelveCaso(){
     int n, m; cin >> n >> m;
@@ -76,6 +87,7 @@ void resuelveCaso(){
     Matriz<int> matriz(n+1, m+1, -1);
 
     int r = mochila(matriz, x, n, m);
+    // int r = mochila_opt(x,n, m);
     cout << "Valor maximo obtenido: " << r << endl;
     vector<bool> v = reconstruccion(matriz, x, n, m);
     cout << "reconstruccion de la solucion: " ; 
