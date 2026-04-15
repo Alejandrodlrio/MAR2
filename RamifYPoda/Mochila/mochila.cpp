@@ -24,7 +24,7 @@ using namespace std;
         Implicitas: (Restricciones estrucurales para la solucion optima.)
             La rama izquierda solo existe si peso_acumulado + objetos[k].peso <= M
             Cada objeto debe estar ordenado segun valor/peso decreciente (mayor valor/peso primero).
-            Si un objeto no se mete en la bolsa su peso no baja de la mochila ni su valor.
+            
 
     4. Tamaño del arbol.
         El arbol tiene un tamaño de 2^N, pero con la funcion de estimacion, podemos podar bastantes ramas cuyo "beneficio_estimado < mejor_beneficio"
