@@ -34,7 +34,10 @@ using namespace std;
 
     5. Test de factibilidad.    
         (1) -> X.tiempo_acumulado + tareas[i].tiempo < tareas[i].plazo 
+            Solo generamos siempre y cuando la tarea a ejecutar está dentro de su plazo.
         (2) -> X.coste_estimado < mejor_coste
+            La estimacion que estamos haciendo es optimista ya que asume que todas las tareas restantes sin plazo cumplido pagaran multa
+            lo que da una cota inferior del coste final.
 */
 struct tarea{
     int tiempo;// tiempo de ejecucion
@@ -50,7 +53,7 @@ struct Nodo{
     int k; // nivel
     vector<bool> sol; // solucionado
     bool operator<(Nodo const& o) const{
-        o.coste_estimado < coste_estimado;
+        return o.coste_estimado < coste_estimado;
     }
 };
 
