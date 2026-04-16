@@ -1,0 +1,196 @@
+
+/*
+    PROBLEMA: Asignación óptima de trabajos a funcionarios
+
+    1. TUPLAS
+        Representamos una solución como: sol[0..N-1] donde sol[i] = j indica que el producto i se compra en el supermercado j.
+
+    2. ESPACIO DE SOLUCIONES
+        Son todas las asignaciones de productos a supermercados, donde cada producto se compra en un único supermercado y cada supermercado puede ser utilizado como máximo 3 veces.
+
+    3. ESTRUCTURA DEL ÁRBOL
+        - La raíz representa una solución vacía.
+        - Nivel k: se asigna supermercado al producto k.
+        - Cada nodo tiene tantos hijos como supermercados que no hayan alcanzado el límite de 3 productos.
+        - Altura del árbol: N.
+
+    4. RESTRICCIONES
+        Explícitas:
+            - Cada producto debe ser comprado como maximo en un supermercado.
+
+        Implícitas:
+            - En un supermercado no se puede comprar más de tres productos.
+            - Se controla con un vector contador[] que indica cuántos productos se han comprado en cada supermercado.
+
+    5. TAMAÑO DEL ÁRBOL
+        m^n (cada producto puede elegirse en cualquiera de los m supermercados, con restricciones)
+
+    6. TEST DE FACTIBILIDAD
+        - Un nodo es factible si el supermercado asignado tiene menos de 3 productos ya asignados.
+
+    7. COTAS
+
+        COTA OPTIMISTA (inferior)
+            - Para los productos restantes, se toma el menor coste posible entre los supermercados.
+            - No se garantiza que la asignación sea válida  (puede superar el límite de 3 productos por supermercado).
+            - Nunca sobreestima el coste real.
+
+       COTA PESIMISTA
+            - Se construye una solución completa greedy respetando las restricciones, asignando cada producto al supermercado disponible más barato que no haya alcanzado el límite de 3 productos.
+            - Es válida y sirve para actualizar la mejor solución.
+
+    8. ESTRATEGIA
+        - Usamos una cola de prioridad.
+        - Siempre expandimos el nodo con menor estimación.
+        - Podamos si estimación >= mejor solución encontrada.
+*/
+
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <climits>
+
+using namespace std;
+
+int n;
+int m;
+vector<vector<int>> precio;
+
+struct Nodo {
+    int k;                    // nivel
+    int coste;                // coste actual
+    int estim;                // cota optimista
+    vector<int> usados;      // trabajos usados
+
+    bool operator<(Nodo const& otro) const {
+        return estim > otro.estim; // menor estimación primero
+    }
+};
+
+
+int estimacion(int k, int beneficio, vector<int> const& usados) {
+
+    int estim = beneficio;
+
+    for (int i = k; i < n; i++) {
+
+        int mejor_val = INT_MAX;
+
+        for (int j = 0; j < m; j++) {
+            
+            mejor_val = min(mejor_val, precio[i][j]);
+        }
+
+        estim += mejor_val;
+    }
+
+    return estim;
+}
+
+
+int pesimista(int k, int coste, vector<int> usados) {
+
+    for (int i = k; i < n; i++) {
+
+        int mejor_val = INT_MAX;
+        int mejor_j = -1;
+
+        for (int j = 0; j < m; j++) {
+            if (usados[j] < 3 && precio[i][j] < mejor_val) {
+                mejor_val = precio[i][j];
+                mejor_j = j;
+            }
+        }
+
+        if (mejor_j == -1) return INT_MAX;
+
+        coste += mejor_val;
+        usados[mejor_j] = usados[mejor_j] + 1;
+    }
+
+    return coste;
+}
+
+// La funcion ooptimista (estimacion) usa usados pero no los marca, pues sino sería una solución real y podaría demasiado pronto
+int resolver() {
+
+    priority_queue<Nodo> cola;
+
+    // raíz
+    Nodo raiz;
+    raiz.k = 0;
+    raiz.coste = 0;
+    raiz.usados = vector<int>(m, 0);
+    raiz.estim = estimacion(0, 0, raiz.usados);
+
+    cola.push(raiz); // metemos la raíz en la cola de prioridad
+
+    int mejor = pesimista(0, 0, raiz.usados);
+
+    while (!cola.empty() && cola.top().estim < mejor) { // mientras la cola no este vacía y la estimación del mejor nodo vivo es menor que la mejor solución encontrada
+
+        Nodo Y = cola.top(); // sacamos el nodo mas prometedor de la cola y lo guardamos en Y
+        cola.pop(); // eliiminamos dicho nodo de la cola
+
+        // generar hijos
+        for (int j = 0; j < m; j++) { // recorremos todos los supermercados 
+
+            if (Y.usados[j] < 3) { // generamos un hijo si el supermercado j no está usado mas de 3 veces por en el nodo Y
+
+                Nodo X; // creamos un nuevo nodo que será hijo de Y 
+                X.k = Y.k + 1;
+                X.usados = Y.usados;
+                X.usados[j] = X.usados[j] + 1;
+
+                X.coste = Y.coste + precio[Y.k][j];
+
+                // solución completa
+                if (X.k == n) {
+                    mejor = min(mejor, X.coste);
+                }
+                else {
+                    X.estim = estimacion(X.k, X.coste, X.usados);
+
+                    if (X.estim < mejor) {
+                        cola.push(X); // si el hijo es prometedor lo metemos en la cola 
+                    }
+                }
+            }
+        }
+    }
+
+    return mejor;
+}
+
+
+int main() {
+
+    int T;
+    cin >> T;
+
+    while (T--) {
+
+        cin >> m >> n; // primero supermercados, luego productos
+
+        precio = vector<vector<int>>(n, vector<int>(m));
+
+        // el input viene por supermercados (filas) pero nosotros usamos precio[producto][supermercado]
+
+        for (int j = 0; j < m; j++) {
+            for (int i = 0; i < n; i++) {
+                cin >> precio[i][j];
+            }
+        }
+
+        int sol = resolver();
+
+        if (sol == INT_MAX) {
+            cout << "Sin solucion factible\n";
+        }
+        else {
+            cout << sol << "\n";
+        }
+    }
+
+    return 0;
+}
