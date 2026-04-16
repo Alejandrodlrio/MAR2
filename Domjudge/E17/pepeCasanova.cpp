@@ -4,6 +4,7 @@
 #include <queue>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 using namespace std;
 
 
@@ -68,7 +69,7 @@ struct Nodo{
     int puntuacion_acumulada;
     int tiempo1;
     int tiempo2;
-    int puntuacion_estimada;
+    double puntuacion_estimada;
 
     bool operator<(Nodo const& o) const {
         return o.puntuacion_estimada > puntuacion_estimada;
@@ -146,7 +147,7 @@ void playlist(vector<Cancion> const& canciones, int maxD, vector<bool> &sol_mejo
     priority_queue<Nodo> q;
     q.push(Y);
 
-    while(!q.empty() && q.top().puntuacion_estimada > puntuacion_mejor){
+    while(!q.empty() && q.top().puntuacion_estimada >= puntuacion_mejor){
         Y = q.top(); q.pop();
         Nodo X(Y);
         X.k++;
@@ -200,7 +201,7 @@ void playlist(vector<Cancion> const& canciones, int maxD, vector<bool> &sol_mejo
 
         puntuacion_mejor = max(puntuacion_mejor, pesimista(X, canciones, maxD));
 
-        if(X.puntuacion_estimada > puntuacion_mejor){
+        if(X.puntuacion_estimada >= puntuacion_mejor){
             if(X.k == N - 1){
                 if(X.puntuacion_acumulada > puntuacion_mejor){
                     puntuacion_mejor = X.puntuacion_acumulada;
@@ -224,7 +225,7 @@ bool resuelveCaso(){
 
     // Ordenamos por puntuacion decreciente para mejorar la poda
     sort(canciones.begin(), canciones.end(), [](Cancion const& a, Cancion const& b){
-        return (a.puntuacion / a.duracion) > (b.puntuacion/ b.duracion);
+        return (double(a.puntuacion) / a.duracion) > (double(b.puntuacion) / b.duracion);
     });
 
     int puntuacion_mejor;
