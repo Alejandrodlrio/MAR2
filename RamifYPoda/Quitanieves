@@ -1,0 +1,183 @@
+
+/*
+    PROBLEMA: Asignación óptima de trabajos a funcionarios
+
+    1. TUPLAS
+        Representamos una solución como: sol[0..N-1] donde sol[i] = j indica que el carro i limpia el camino j.
+
+    2. ESPACIO DE SOLUCIONES
+        Son todas las asignaciones posibles de carros a caminos, sin repetir caminos y respetando las restricciones de anchura, permitiendo que algunos carros no limpien ningún camino.
+
+    3. ESTRUCTURA DEL ÁRBOL
+        - La raíz representa una solución vacía.
+        - Nivel k: se asigna camino al carro k.
+        - Cada nodo tiene tantos hijos como caminos disponibles queden, más un hijo adicional que representa no asignar ningún camino al carro.
+        - Altura del árbol: N.
+
+    4. RESTRICCIONES
+        Explícitas:0
+            - Cada carro puede limpiar como maximo un camino.
+
+        Implícitas:
+            - Un camino no puede ser limpiado por más de un carro, sin embargo, no todos los caminos deben ser limpiados.
+            - Se controla con un vector limpiados[].
+
+    5. TAMAÑO DEL ÁRBOL
+        P(m, n) = m! / (m - n)! (elijo n caminos de m)
+
+    6. TEST DE FACTIBILIDAD
+        - Un nodo es factible si el camino que se asigna no ha sido limpiado y la anchura del camino es mayor o igual que la del carro.
+
+    7. COTAS
+
+        COTA OPTIMISTA
+            - Para los carros restantes, se toma el máximo valor posible entre los caminos disponibles que aun no han sido utilizados.
+            - No se garantiza que la asignación sea válida (puede reutilizar caminos).
+            - Nunca subestima el valor de la solución óptima.
+
+       COTA PESIMISTA
+            - Se construye una solución completa greedy respetando las restricciones, es decir, asignando en cada paso el mejor camino disponible.
+            - Es válida y sirve para actualizar la mejor solución.
+
+    8. ESTRATEGIA
+        - Usamos una cola de prioridad.
+        - Siempre expandimos el nodo con mayor estimación.
+        - Podamos si estimación <= mejor solución encontrada.
+
+   La cota optimista se utiliza para guiar la búsqueda y podar, mientras que la cota pesimista se utiliza para actualizar la mejor solución encontrada.
+*/
+
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <climits>
+
+using namespace std;
+
+int n;
+int m;
+vector<int> carros;
+vector<int> caminos;
+vector<vector<int>> calidad;
+
+struct Nodo {
+    int k;                    // nivel
+    int beneficio;            // calidad actual
+    int estim;                // cota optimista
+    vector<bool> limpiados;   // caminos limpiados 
+
+    bool operator<(Nodo const& otro) const {
+        return estim < otro.estim; // mayor estimación primero
+    }
+};
+
+
+int pesimista(int k, int beneficios, vector<bool> limpiados) {
+
+    for (int i = k; i < n; i++) {
+
+        int mejor_val = -1;
+        int mejor_j = -1;
+
+        for (int j = 0; j < m; j++) {
+            if (!limpiados[j] && caminos[j] >= carros[i]) {
+                if (calidad[i][j] > mejor_val) {
+                    mejor_val = calidad[i][j];
+                    mejor_j = j;
+                }
+            }
+        }
+
+        if (mejor_j == -1) return beneficios;
+
+        beneficios += mejor_val;
+        limpiados[mejor_j] = true;
+    }
+
+    return beneficios;
+}
+
+int resolver() {
+
+    priority_queue<Nodo> cola;
+
+    Nodo raiz;
+    raiz.k = 0;
+    raiz.beneficio = 0;
+    raiz.limpiados = vector<bool>(m, false);
+    raiz.estim = estimacion(0, 0, raiz.limpiados);
+
+    cola.push(raiz);
+
+    int mejor = 0;
+
+    while (!cola.empty() && cola.top().estim > mejor) {
+
+        Nodo Y = cola.top();
+        cola.pop();
+
+        // hijos: asignar un camino válido
+        for (int j = 0; j < m; j++) {
+            if (!Y.limpiados[j] && caminos[j] >= carros[Y.k]) {
+
+                Nodo X;
+                X.k = Y.k + 1;
+                X.limpiados = Y.limpiados;
+                X.limpiados[j] = true;
+                X.beneficio = Y.beneficio + calidad[Y.k][j];
+
+                if (X.k == n) {
+                    mejor = max(mejor, X.beneficio);
+                }
+                else {
+                    X.estim = estimacion(X.k, X.beneficio, X.limpiados);
+                    if (X.estim > mejor) cola.push(X);
+                }
+            }
+        }
+
+        // hijo: no asignar camino a este carro
+        Nodo X;
+        X.k = Y.k + 1;
+        X.limpiados = Y.limpiados;
+        X.beneficio = Y.beneficio;
+
+        if (X.k == n) {
+            mejor = max(mejor, X.beneficio);
+        }
+        else {
+            X.estim = estimacion(X.k, X.beneficio, X.limpiados);
+            if (X.estim > mejor) cola.push(X);
+        }
+    }
+
+    return mejor;
+}
+
+
+int main() {
+
+    int T;
+    cin >> T;
+
+    while (T--) {
+
+        cin >> n >> m;
+
+        carros = vector<int>(n);
+        caminos = vector<int>(m);
+
+        for (int i = 0; i < n; i++) cin >> carros[i];
+        for (int j = 0; j < m; j++) cin >> caminos[j];
+
+        calidad = vector<vector<int>>(n, vector<int>(m));
+
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++)
+                cin >> calidad[i][j];
+
+        cout << resolver() << endl;
+    }
+
+    return 0;
+}
