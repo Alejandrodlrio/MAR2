@@ -1,0 +1,185 @@
+#include <vector>
+#include <queue>
+#include <iostream>
+using namespace std;
+
+/*
+    PROBLEMA: Asignación óptima de trabajos a funcionarios
+
+    1. TUPLAS
+        Representamos una solución como: sol[0..N-1] donde sol[i] = j indica que el funcionario i realiza el trabajo j.
+
+    2. ESPACIO DE SOLUCIONES
+        Todas las permutaciones de los trabajos {0,1,...,N-1}. Cada solución es una asignación completa de trabajos sin repetir.
+
+    3. ESTRUCTURA DEL ÁRBOL
+        - La raíz representa una solución vacía.
+        - Nivel k: se asigna trabajo al funcionario k.
+        - Cada nodo tiene tantos hijos como trabajos libres queden.
+        - Altura del árbol: N.
+
+    4. RESTRICCIONES
+        Explícitas:
+            - Cada funcionario debe tener un trabajo.
+
+        Implícitas:
+            - Un trabajo no puede asignarse a más de un funcionario.
+            - Se controla con un vector usados[].
+
+    5. TAMAÑO DEL ÁRBOL
+        N! (permutaciones)
+
+    6. TEST DE FACTIBILIDAD
+        - Un nodo es factible si el trabajo que se asigna no está usado.
+
+    7. COTAS
+
+        COTA OPTIMISTA (inferior)
+            - Para los funcionarios restantes, se toma el menor coste posible entre los trabajos disponibles.
+            - No se garantiza que la asignación sea válida (puede reutilizar trabajos).
+            - Nunca sobreestima el coste real.
+
+       COTA PESIMISTA
+            - Se construye una solución completa greedy, es decir, en cada paso elijo lo mejor posible en ese momento.
+            - Es válida y sirve para actualizar la mejor solución.
+
+    8. ESTRATEGIA
+        - Usamos una cola de prioridad.
+        - Siempre expandimos el nodo con menor estimación.
+        - Podamos si estimación >= mejor solución encontrada.
+*/
+
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <climits>
+
+using namespace std;
+
+int N;
+vector<vector<int>> tiempo;
+
+struct Nodo {
+    int k;                    // nivel
+    int coste;                // coste actual
+    int estim;                // cota optimista
+    vector<bool> usados;      // trabajos usados
+
+    bool operator<(Nodo const& otro) const {
+        return estim > otro.estim; // menor estimación primero
+    }
+};
+
+
+int estimacion(int k, int coste, vector<bool> const& usados) {
+
+    int estim = coste;
+    vector<bool> aux = usados;
+
+    for (int i = k; i < N; i++) {
+
+        int mejor_val = INT_MAX;
+        int mejor_j = -1;
+
+        for (int j = 0; j < N; j++) {
+            if (!aux[j] && tiempo[i][j] < mejor_val) {
+                mejor_val = tiempo[i][j];
+                mejor_j = j;
+            }
+        }
+
+        estim += mejor_val;
+    }
+
+    return estim;
+}
+
+
+int pesimista(int k, int coste, vector<bool> usados) {
+
+    for (int i = k; i < N; i++) {
+
+        int mejor_val = INT_MAX;
+        int mejor_j = -1;
+
+        for (int j = 0; j < N; j++) {
+            if (!usados[j] && tiempo[i][j] < mejor_val) {
+                mejor_val = tiempo[i][j];
+                mejor_j = j;
+            }
+        }
+
+        coste += mejor_val;
+        usados[mejor_j] = true;
+    }
+
+    return coste;
+}
+
+// La funcion ooptimista (estimacion) usa usados pero no los marca, pues sino sería una solución real y podaría demasiado pronto
+int resolver() {
+
+    priority_queue<Nodo> cola;
+
+    // raíz
+    Nodo raiz;
+    raiz.k = 0;
+    raiz.coste = 0;
+    raiz.usados = vector<bool>(N, false);
+    raiz.estim = estimacion(0, 0, raiz.usados);
+
+    cola.push(raiz); // metemos la raíz en la cola de prioridad
+
+    int mejor = pesimista(0, 0, raiz.usados);
+
+    while (!cola.empty() && cola.top().estim < mejor) { // mientras la cola no este vacía y la estimación del mejor nodo vivo es menor que la mejor solución encontrada
+
+        Nodo Y = cola.top(); // sacamos el nodo mas prometedor de la cola y lo guardamos en Y
+        cola.pop(); // eliiminamos dicho nodo de la cola
+
+        // generar hijos
+        for (int j = 0; j < N; j++) { // recorremos todos los trabajos 
+
+            if (!Y.usados[j]) { // generamos un hijo si el trabajo j no está usado en el nodo Y
+               
+                Nodo X; // creamos un nuevo nodo que será hijo de Y 
+                X.k = Y.k + 1;
+                X.usados = Y.usados;
+                X.usados[j] = true;
+
+                X.coste = Y.coste + tiempo[Y.k][j];
+
+                // solución completa
+                if (X.k == N) {
+                    mejor = min(mejor, X.coste);
+                }
+                else {
+                    X.estim = estimacion(X.k, X.coste, X.usados);
+
+                    if (X.estim < mejor) {
+                        cola.push(X); // si el hijo es prometedor lo metemos en la cola 
+                    }
+                }
+            }
+        }
+    }
+
+    return mejor;
+}
+
+
+int main() {
+
+    while (cin >> N && N != 0) {
+
+        tiempo = vector<vector<int>>(N, vector<int>(N));
+
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < N; j++)
+                cin >> tiempo[i][j];
+
+        cout << resolver() << endl;
+    }
+
+    return 0;
+}
